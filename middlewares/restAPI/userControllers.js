@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../../models/users');
 const Notes = require('../../models/notes');
+const { Result } = require('express-validator');
 
 // Function to handle errors
 const handleErrorResponse = (res, statusCode, message) => {
@@ -127,37 +128,29 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// Controller for resetting user name
-exports.resetName = async (req, res) => {
-  try {
-    const { newName } = req.body;
-    const email = req.email;
-    const updated = await User.updateOne({ email }, { name: newName });
 
-    if (updated) {
-      res.status(200).send({ message: 'Name has been changed' });
-    } else {
-      res.status(400).send('Unknown Error: Update not successful');
-    }
-
-  } catch (error) {
-    handleErrorResponse(res, 500, 'Something went wrong');
-  }
-};
 
 // Controller to show a note
 exports.showNote = async (req, res) => {
   try {
-    const { note_id } = req.body;
-    const data = await Notes.findOne({ _id: note_id });
+    const allNotes = (await User.findOne({ email: req.email })).notes
+    const notesData = allNotes.map(async (item) => {
+
+      return await Notes.findOne({ _id: item })
+
+    })
+
     res.status(200).send({
-      message: "Note has been retrieved",
-      note: data
+      message: "Notes has been retrieved",
+      notes: notesData
     });
   } catch (error) {
     handleErrorResponse(res, 500, 'Something went wrong');
   }
 };
+
+
+
 
 // Controller to create a note
 exports.createNote = async (req, res) => {
@@ -198,7 +191,6 @@ exports.deleteNote = async (req, res) => {
     const { note_id } = req.body;
     await Notes.deleteOne({ _id: note_id });
     await User.updateOne({ email: req.email }, { $pull: { notes: note_id } });
-
     res.status(200).send({
       message: "Note has been deleted",
       note_id: note_id
