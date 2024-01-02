@@ -9,7 +9,6 @@ const Schema = new mongoose.Schema({
         type:String,
         required: true
     },
-   user:mongoose.Schema.Types.ObjectId
 },
 {
     timestamps: true

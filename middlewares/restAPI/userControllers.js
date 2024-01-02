@@ -134,12 +134,16 @@ exports.resetPassword = async (req, res) => {
 exports.showNote = async (req, res) => {
   try {
     const allNotes = (await User.findOne({ email: req.email })).notes
-    const notesData = allNotes.map(async (item) => {
-
-      return await Notes.findOne({ _id: item })
-
-    })
-
+    if (!allNotes) {
+      return res.status.send({ message: "No notes found" })
+    }
+    const notesData = await Promise.all(
+      allNotes.map(async (item) => {
+        const data = await Notes.findOne({ _id: item }).exec();
+        // console.log(data)
+        return data;
+      })
+    );
     res.status(200).send({
       message: "Notes has been retrieved",
       notes: notesData
@@ -156,10 +160,12 @@ exports.showNote = async (req, res) => {
 exports.createNote = async (req, res) => {
   try {
     const { title, content } = req.body;
-
+    if (!title || !content) {
+      return res.status(401).send({message: "note_id is required"})
+    }
     const newNote = new Notes({ title, content });
     const data = await newNote.save();
-    await User.updateOne({ email: req.email }, { $push: { notes: data._id } });
+    await User.updateOne({ email: req.email }, { $push: { notes: data._id }});
 
     res.status(200).send({
       message: "Note has been saved",
@@ -174,23 +180,37 @@ exports.createNote = async (req, res) => {
 exports.updateNote = async (req, res) => {
   try {
     const { note_id, title, content } = req.body;
-    const data = await Notes.updateOne({ _id: note_id }, { title, content });
+    if (!note_id) {
+      return res.status(401).send({ message: "note_id is required" })
+    }
+
+    // Create an object with only the defined properties
+    const updateObject = {};
+    if (title !== undefined) {
+      updateObject.title = title;
+    }
+    if (content !== undefined) {
+      updateObject.content = content;
+    }
+
+    await Notes.updateOne({ _id: note_id }, updateObject);
 
     res.status(200).send({
       message: "Note has been updated",
-      note: data
     });
   } catch (error) {
     handleErrorResponse(res, 500, 'Something went wrong');
   }
 };
-
 // Controller to delete a note
 exports.deleteNote = async (req, res) => {
   try {
     const { note_id } = req.body;
+    if (!note_id) {
+      return res.status(401).send({ message: "note_id is required" })
+    }
     await Notes.deleteOne({ _id: note_id });
-    await User.updateOne({ email: req.email }, { $pull: { notes: note_id } });
+    await User.updateOne({ email: req.email }, {$pull: { notes: note_id }});
     res.status(200).send({
       message: "Note has been deleted",
       note_id: note_id
