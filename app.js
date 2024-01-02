@@ -43,7 +43,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 
-app.use('/restapi', restAPI);
+app.use('/', restAPI);
 app.use('/ejs', ejsAPI);
 
 
